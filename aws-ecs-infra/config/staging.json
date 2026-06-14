@@ -1,0 +1,7 @@
+{
+  "env": "staging",
+  "account_id": "678804053714",
+  "region": "ap-south-1",
+  "backend_desired_count": 1,
+  "frontend_desired_count": 1
+}

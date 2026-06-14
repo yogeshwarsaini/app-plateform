@@ -1,0 +1,72 @@
+name: Deploy ECS Infra
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "dev"
+        type: choice
+        options: [dev, staging]
+      action:
+        description: "CDK action"
+        required: true
+        default: "diff"
+        type: choice
+        options: [deploy, diff, destroy]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  cdk-deploy:
+    name: CDK ${{ github.event.inputs.action }} - ${{ github.event.inputs.environment }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: aws-ecs-infra
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r requirements.txt
+
+      - run: npm install -g aws-cdk
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ap-south-1
+
+      - name: CDK Bootstrap
+        if: github.event.inputs.action == 'deploy'
+        run: cdk bootstrap aws://${{ secrets.AWS_ACCOUNT_ID }}/ap-south-1
+
+      - name: CDK Diff
+        if: github.event.inputs.action == 'diff'
+        run: cdk diff --all --context env=${{ github.event.inputs.environment }}
+
+      - name: CDK Deploy
+        if: github.event.inputs.action == 'deploy'
+        run: |
+          cdk deploy --all \
+            --context env=${{ github.event.inputs.environment }} \
+            --require-approval never \
+            --outputs-file outputs.json
+
+      - name: CDK Destroy
+        if: github.event.inputs.action == 'destroy'
+        run: cdk destroy --all --context env=${{ github.event.inputs.environment }} --force
+
+      - name: Upload outputs
+        if: github.event.inputs.action == 'deploy'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cdk-outputs-${{ github.event.inputs.environment }}
+          path: aws-ecs-infra/outputs.json

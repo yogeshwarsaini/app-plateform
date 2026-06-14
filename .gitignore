@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# CDK
+cdk.out/
+outputs.json
+
+# Node
+node_modules/
+build/
+.env.local
+
+# General
+.DS_Store
