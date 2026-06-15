@@ -37,7 +37,7 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - run: npm install -g aws-cdk
+      - run: npm install -g aws-cdk@2
       - name: Debug OIDC Token
         run: |
           TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
