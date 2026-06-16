@@ -1,5 +1,4 @@
 name: Deploy ECS Infra
-
 on:
   workflow_dispatch:
     inputs:
@@ -20,6 +19,10 @@ permissions:
   id-token: write
   contents: read
 
+env:
+  AWS_REGION: ap-south-1
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-south-1.amazonaws.com
+
 jobs:
   cdk-deploy:
     name: CDK ${{ github.event.inputs.action }} - ${{ github.event.inputs.environment }}
@@ -27,7 +30,6 @@ jobs:
     defaults:
       run:
         working-directory: aws-ecs-infra
-
     steps:
       - uses: actions/checkout@v4
 
@@ -36,27 +38,57 @@ jobs:
           python-version: "3.11"
 
       - run: pip install -r requirements.txt
-
       - run: npm install -g aws-cdk@2
-      - name: Debug OIDC Token
-        run: |
-          TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r '.value')
-          echo $TOKEN | cut -d'.' -f2 | base64 -d 2>/dev/null | python3 -m json.tool
-      - uses: aws-actions/configure-aws-credentials@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ap-south-1
 
-      - name: CDK Bootstrap
-        if: github.event.inputs.action == 'deploy'
-        run: cdk bootstrap aws://${{ secrets.AWS_ACCOUNT_ID }}/ap-south-1
-
+      # ---------- DIFF ----------
       - name: CDK Diff
         if: github.event.inputs.action == 'diff'
         run: cdk diff --all --context env=${{ github.event.inputs.environment }}
 
-      - name: CDK Deploy
+      # ---------- DEPLOY ----------
+      - name: CDK Bootstrap
+        if: github.event.inputs.action == 'deploy'
+        run: cdk bootstrap aws://${{ secrets.AWS_ACCOUNT_ID }}/ap-south-1
+
+      # 1) Pehle SIRF ECR stack deploy karo (repos ban jayein)
+      - name: CDK Deploy - ECR only
+        if: github.event.inputs.action == 'deploy'
+        run: |
+          cdk deploy MyApp-${{ github.event.inputs.environment == 'dev' && 'Dev' || 'Staging' }}-Ecr \
+            --context env=${{ github.event.inputs.environment }} \
+            --require-approval never
+
+      # 2) ECR login
+      - name: Login to ECR
+        if: github.event.inputs.action == 'deploy'
+        run: |
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} \
+            | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
+
+      # 3) Backend image build + push
+      - name: Build & push backend image
+        if: github.event.inputs.action == 'deploy'
+        working-directory: python-backend
+        run: |
+          docker build -t ${{ env.ECR_REGISTRY }}/myapp-${{ github.event.inputs.environment }}-backend:latest .
+          docker push ${{ env.ECR_REGISTRY }}/myapp-${{ github.event.inputs.environment }}-backend:latest
+
+      # 4) Frontend image build + push
+      - name: Build & push frontend image
+        if: github.event.inputs.action == 'deploy'
+        working-directory: react-frontend
+        run: |
+          docker build -t ${{ env.ECR_REGISTRY }}/myapp-${{ github.event.inputs.environment }}-frontend:latest .
+          docker push ${{ env.ECR_REGISTRY }}/myapp-${{ github.event.inputs.environment }}-frontend:latest
+
+      # 5) Ab pura deploy (ECS bhi) — image ab ready hai
+      - name: CDK Deploy - all
         if: github.event.inputs.action == 'deploy'
         run: |
           cdk deploy --all \
@@ -64,10 +96,12 @@ jobs:
             --require-approval never \
             --outputs-file outputs.json
 
+      # ---------- DESTROY ----------
       - name: CDK Destroy
         if: github.event.inputs.action == 'destroy'
         run: cdk destroy --all --context env=${{ github.event.inputs.environment }} --force
 
+      # ---------- OUTPUTS ----------
       - name: Upload outputs
         if: github.event.inputs.action == 'deploy'
         uses: actions/upload-artifact@v4
