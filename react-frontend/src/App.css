@@ -101,4 +101,14 @@ h2 { margin-bottom: 1rem; color: #232f3e; }
   padding: 4px 12px;
   cursor: pointer;
   font-size: 0.85rem;
+
+
 }
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+
+
