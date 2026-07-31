@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import students, health
+from app.routers import students, health , payments , auth_routes
 import os
 
 app = FastAPI(title="Fees Portal Backend", version="1.0.0")
@@ -13,6 +13,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth_routes.router)
+app.include_router(payments.router)
 app.include_router(health.router)
 app.include_router(students.router)
 
