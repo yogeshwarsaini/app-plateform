@@ -1,13 +1,16 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import students, health , payments , auth_routes
+from app.routers import students, health, payments, auth_routes
 import os
 
 app = FastAPI(title="Fees Portal Backend", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://app-plateform.vercel.app",
+        "https://app-plateform-8cklk01iu-yogeshwarsainis-projects.vercel.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
