@@ -7,10 +7,7 @@ app = FastAPI(title="Fees Portal Backend", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://app-plateform.vercel.app",
-        "https://app-plateform-8cklk01iu-yogeshwarsainis-projects.vercel.app",
-    ],
+    allow_origin_regex=r"https://app-plateform.*\vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
