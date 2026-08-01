@@ -10,8 +10,8 @@ app.add_middleware(
     allow_origins=[
         "https://app-plateform.vercel.app",
     ],
-    allow_origin_regex=r"https://app-plateform.*\.vercel\.app",
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
