@@ -7,9 +7,6 @@ app = FastAPI(title="Fees Portal Backend", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://app-plateform.vercel.app",
-    ],
     allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
@@ -23,4 +20,4 @@ app.include_router(students.router)
 
 @app.get("/")
 def root():
-    return {"message": " tumhari esi ki tesi , Fees Portal Backend is running!"}
+    return {"message": " L lg gye tumhari esi ki tesi , Fees Portal Backend is running!"}
