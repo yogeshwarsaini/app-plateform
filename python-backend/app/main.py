@@ -23,4 +23,4 @@ app.include_router(students.router)
 
 @app.get("/")
 def root():
-    return {"message": "Fees Portal Backend is running!"}
+    return {"message": " tumhari esi ki tesi , Fees Portal Backend is running!"}
