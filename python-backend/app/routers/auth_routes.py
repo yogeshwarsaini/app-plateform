@@ -109,3 +109,48 @@ def my_student(user: models.User = Depends(get_current_user), db: Session = Depe
             for p in custom
         ],
     }
+
+class ParentSignupIn(BaseModel):
+    name: str
+    email: str | None = None
+    phone: str
+    password: str
+    admission_no: str   # student verify karne ke liye
+
+
+@router.post("/signup")
+def parent_signup(payload: ParentSignupIn, db: Session = Depends(get_db)):
+    # student exist karta hai admission_no se?
+    student = db.query(models.Student).filter(
+        models.Student.admission_no == payload.admission_no
+    ).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Ye admission number nahi mila. Check karo.")
+
+    # phone already registered to nahi?
+    if db.query(models.User).filter(models.User.phone == payload.phone).first():
+        raise HTTPException(status_code=400, detail="Ye phone se pehle se account hai. Login karo.")
+
+    # email diya hai to wo bhi check
+    if payload.email:
+        if db.query(models.User).filter(models.User.email == payload.email).first():
+            raise HTTPException(status_code=400, detail="Ye email already registered hai")
+
+    user = models.User(
+        name=payload.name,
+        email=payload.email,
+        phone=payload.phone,
+        password_hash=hash_password(payload.password),
+        role="parent",
+        student_id=student.id,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    token = create_token({"user_id": user.id, "role": user.role})
+    return {
+        "token": token,
+        "user": {"id": user.id, "name": user.name, "role": user.role, "student_id": user.student_id},
+        "message": f"Account ban gaya! Aap {student.name} ke parent ke roop me register ho gaye.",
+    }
