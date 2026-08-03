@@ -70,3 +70,16 @@ export async function getMyStudent() {
   if (!res.ok) throw new Error("Data laane me dikkat");
   return res.json();
 }
+
+export async function signup(payload) {
+  const res = await fetch(`${API_URL}/api/v1/auth/signup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Signup fail");
+  }
+  return res.json();
+}
