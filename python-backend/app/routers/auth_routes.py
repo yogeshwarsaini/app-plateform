@@ -154,3 +154,34 @@ def parent_signup(payload: ParentSignupIn, db: Session = Depends(get_db)):
         "user": {"id": user.id, "name": user.name, "role": user.role, "student_id": user.student_id},
         "message": f"Account ban gaya! Aap {student.name} ke parent ke roop me register ho gaye.",
     }
+
+class ForgotPasswordIn(BaseModel):
+    phone: str
+    admission_no: str
+    new_password: str
+
+
+@router.post("/forgot-password")
+def forgot_password(payload: ForgotPasswordIn, db: Session = Depends(get_db)):
+    # user dhoondh phone se
+    user = db.query(models.User).filter(models.User.phone == payload.phone).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Ye phone se koi account nahi mila")
+
+    # admin ke liye ye flow nahi (parent hi)
+    if user.role != "parent":
+        raise HTTPException(status_code=400, detail="Ye reset sirf parent account ke liye hai")
+
+    # admission_no us user ke bachche se match karta hai?
+    student = db.query(models.Student).filter(
+        models.Student.admission_no == payload.admission_no
+    ).first()
+
+    if not student or student.id != user.student_id:
+        raise HTTPException(status_code=400, detail="Phone aur admission number match nahi ho rahe")
+
+    # sab sahi, password update karo
+    user.password_hash = hash_password(payload.new_password)
+    db.commit()
+
+    return {"message": "Password reset ho gaya! Ab naye password se login karo."}
