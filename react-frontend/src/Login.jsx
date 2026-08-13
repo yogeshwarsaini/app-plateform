@@ -141,10 +141,10 @@ function SignupForm({ onLogin }) {
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   function submit() {
-    if (!form.name || !form.phone || !form.password || !form.admission_no) {
-      setError("Naam, phone, password aur admission number zaroori hai");
-      return;
-    }
+   if (!form.name || !form.phone || !form.email || !form.password || !form.admission_no) {
+  setError("Naam, email, phone, password aur admission number zaroori hai");
+  return;
+}
     setBusy(true);
     setError("");
     apiSignup(form)
@@ -152,6 +152,12 @@ function SignupForm({ onLogin }) {
       .catch((err) => setError(err.message))
       .finally(() => setBusy(false));
   }
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+if (!emailRegex.test(form.email)) {
+  setError("Sahi email address daalo (example: name@gmail.com)");
+  return;
+}
 
   return (
     <>
@@ -165,7 +171,7 @@ function SignupForm({ onLogin }) {
       <input value={form.phone} onChange={set("phone")} placeholder="9876543210"
         className="w-full border border-slate-200 rounded-lg px-3 py-2 mb-3 outline-none focus:border-sky-500 transition" />
 
-      <label className="text-xs text-slate-500 mb-1 block">Email (optional)</label>
+      <label className="text-xs text-slate-500 mb-1 block">Email <span className="text-red-500">*</span></label>
       <input value={form.email} onChange={set("email")} placeholder="rakesh@example.com"
         className="w-full border border-slate-200 rounded-lg px-3 py-2 mb-3 outline-none focus:border-sky-500 transition" />
 

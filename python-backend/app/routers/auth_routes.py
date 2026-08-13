@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from app.database import get_db
 from app import models
 from app.auth import hash_password, verify_password, create_token
-
+from pydantic import EmailStr, validator
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
@@ -118,42 +118,104 @@ class ParentSignupIn(BaseModel):
     admission_no: str   # student verify karne ke liye
 
 
+# @router.post("/signup")
+# def parent_signup(payload: ParentSignupIn, db: Session = Depends(get_db)):
+#     # student exist karta hai admission_no se?
+#     student = db.query(models.Student).filter(
+#         models.Student.admission_no == payload.admission_no
+#     ).first()
+#     if not student:
+#         raise HTTPException(status_code=404, detail="Ye admission number nahi mila. Check karo.")
+
+#     # phone already registered to nahi?
+#     if db.query(models.User).filter(models.User.phone == payload.phone).first():
+#         raise HTTPException(status_code=400, detail="Ye phone se pehle se account hai. Login karo.")
+
+#     # email diya hai to wo bhi check
+#     if payload.email:
+#         if db.query(models.User).filter(models.User.email == payload.email).first():
+#             raise HTTPException(status_code=400, detail="Ye email already registered hai")
+
+# /
+#         "token": token,
+#         "user": {"id": user.id, "name": user.name, "role": user.role, "student_id": user.student_id},
+#         "message": f"Account ban gaya! Aap {student.name} ke parent ke roop me register ho gaye.",
+#     }
+
+# from pydantic import EmailStr, validator  # ← Ye import add karo top mein
+
+class ParentSignupIn(BaseModel):
+    name: str
+    phone: str
+    email: EmailStr  # ← Email ab REQUIRED aur VALIDATED hoga
+    password: str
+    admission_no: str
+    
+    # ✅ Extra validation
+    @validator('email')
+    def email_not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Email zaroori hai")
+        return v.strip()
+    
+    @validator('phone')
+    def phone_valid(cls, v):
+        if not v or len(v) < 10:
+            raise ValueError("Valid phone number daalo")
+        return v
+    
+    @validator('name')
+    def name_not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Naam zaroori hai")
+        return v.strip()
+
 @router.post("/signup")
 def parent_signup(payload: ParentSignupIn, db: Session = Depends(get_db)):
-    # student exist karta hai admission_no se?
-    student = db.query(models.Student).filter(
-        models.Student.admission_no == payload.admission_no
-    ).first()
-    if not student:
-        raise HTTPException(status_code=404, detail="Ye admission number nahi mila. Check karo.")
+    try:
+        # ✅ Student exist karta hai admission_no se?
+        student = db.query(models.Student).filter(
+            models.Student.admission_no == payload.admission_no
+        ).first()
+        if not student:
+            raise HTTPException(status_code=404, detail="Ye admission number nahi mila. Check karo.")
 
-    # phone already registered to nahi?
-    if db.query(models.User).filter(models.User.phone == payload.phone).first():
-        raise HTTPException(status_code=400, detail="Ye phone se pehle se account hai. Login karo.")
+        # ✅ Phone already registered to nahi?
+        if db.query(models.User).filter(models.User.phone == payload.phone).first():
+            raise HTTPException(status_code=400, detail="Ye phone se pehle se account hai. Login karo.")
 
-    # email diya hai to wo bhi check
-    if payload.email:
+        # ✅ Email already registered to nahi? (Ab ye hamesha check hoga)
         if db.query(models.User).filter(models.User.email == payload.email).first():
             raise HTTPException(status_code=400, detail="Ye email already registered hai")
 
-    user = models.User(
-        name=payload.name,
-        email=payload.email,
-        phone=payload.phone,
-        password_hash=hash_password(payload.password),
-        role="parent",
-        student_id=student.id,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+        # ✅ Email empty nahi hona chahiye (extra safety)
+        if not payload.email or not payload.email.strip():
+            raise HTTPException(status_code=400, detail="Email zaroori hai!")
 
-    token = create_token({"user_id": user.id, "role": user.role})
-    return {
-        "token": token,
-        "user": {"id": user.id, "name": user.name, "role": user.role, "student_id": user.student_id},
-        "message": f"Account ban gaya! Aap {student.name} ke parent ke roop me register ho gaye.",
-    }
+        user = models.User(
+            name=payload.name.strip(),
+            email=payload.email.strip(),  # ← Trim karo
+            phone=payload.phone.strip(),
+            password_hash=hash_password(payload.password),
+            role="parent",
+            student_id=student.id,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        token = create_token({"user_id": user.id, "role": user.role})
+        return {
+            "token": token,
+            "user": {"id": user.id, "name": user.name, "role": user.role, "student_id": user.student_id},
+            "message": f"Account ban gaya! Aap {student.name} ke parent ke roop me register ho gaye.",
+        }
+    
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 class ForgotPasswordIn(BaseModel):
     phone: str
