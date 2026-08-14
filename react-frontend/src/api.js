@@ -83,3 +83,15 @@ export async function signup(payload) {
   }
   return res.json();
 }
+
+export async function deleteStudent(id) {
+  const res = await fetch(`${API_URL}/api/v1/students/${id}`, {
+    method: "DELETE",
+    headers: { ...authHeaders() },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Delete fail");
+  }
+  return res.json();
+}

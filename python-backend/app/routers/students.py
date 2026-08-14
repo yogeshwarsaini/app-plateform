@@ -162,3 +162,22 @@ def add_student(payload: StudentIn, db: Session = Depends(get_db), admin = Depen
     db.commit()
     db.refresh(student)
     return {"id": student.id, "name": student.name, "message": "Student add ho gaya, fees bhi ban gayi"}
+
+@router.delete("/{student_id}")
+def delete_student(student_id: int, db: Session = Depends(get_db), admin=Depends(require_admin)):
+    student = db.query(models.Student).filter(models.Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student nahi mila")
+
+    # judi hui cheezein bhi delete (fees, payments FK cascade nahi kare to manually)
+    db.query(models.Payment).filter(models.Payment.student_id == student_id).delete()
+    db.query(models.Fee).filter(models.Fee.student_id == student_id).delete()
+    # agar iska parent account bhi tha, uska link hata do (account delete nahi, bas unlink)
+    parents = db.query(models.User).filter(models.User.student_id == student_id).all()
+    for p in parents:
+        p.student_id = None
+
+    db.delete(student)
+    db.commit()
+
+    return {"message": f"{student.name} delete ho gaya"}

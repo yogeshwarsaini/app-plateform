@@ -1,10 +1,10 @@
-import { getStudents , getStudent , makePayment , addStudent , setAuthToken } from "./api";
+import { getStudents , getStudent , makePayment , addStudent , deleteStudent , setAuthToken } from "./api";
 import { useState, useMemo , useEffect } from "react";
 import ParentView from "./ParentView";
 import Login from "./Login";
 import {
   Search, Wallet, Clock, Users, CheckCircle2, X, ArrowLeft, Printer,
-  IndianRupee, CalendarDays, FileText, Sun, Moon, Plus, Coins,
+  IndianRupee, CalendarDays, FileText, Sun, Moon, Plus, Coins, Trash2,
 } from "lucide-react";
 //import { useState, useMemo, useEffect } from "react";
 
@@ -113,6 +113,17 @@ useEffect(() => {
   }
   
   const [detail, setDetail] = useState(null);
+
+  function handleDeleteStudent(student) {
+    if (!window.confirm(`${student.name} ko delete karna hai? Ye permanent hai.`)) return;
+    deleteStudent(student.id)
+      .then(() => {
+        setSelectedId(null);
+        setDetail(null);
+        refreshList();
+      })
+      .catch((err) => alert(err.message));
+  }
 
   function openStudent(id) {
     setSelectedId(id);
@@ -277,7 +288,8 @@ useEffect(() => {
           </>
         ) : (
           <StudentDetail T={T} student={selected} stats={statsOf(selected)}
-            onBack={() => { setSelectedId(null); setDetail(null); }} onPayItem={payItem} onPayCustom={payCustom} />
+            onBack={() => { setSelectedId(null); setDetail(null); }} onPayItem={payItem} onPayCustom={payCustom}
+            onDelete={handleDeleteStudent} />
         )}
       </main>
 
@@ -302,7 +314,7 @@ function SummaryCard({ T, icon, label, value, tone }) {
   
 }
 
-function StudentDetail({ T, student, stats, onBack, onPayItem, onPayCustom }) {
+function StudentDetail({ T, student, stats, onBack, onPayItem, onPayCustom, onDelete }) {  
   const [collect, setCollect] = useState(null);
   const [customOpen, setCustomOpen] = useState(false);
   const months = (student.fees || []).filter((f) => f.type === "monthly");
@@ -325,6 +337,10 @@ function StudentDetail({ T, student, stats, onBack, onPayItem, onPayCustom }) {
           <button onClick={() => setCustomOpen(true)}
             className="ml-auto shrink-0 inline-flex items-center gap-1.5 text-sm font-medium bg-sky-600 text-white px-3 py-2 rounded-lg hover:bg-sky-500 transition">
             <Plus size={15} /> Custom payment
+          </button>
+           <button onClick={() => onDelete(student)}
+            className="shrink-0 inline-flex items-center gap-1.5 text-sm font-medium bg-red-50 text-red-600 px-3 py-2 rounded-lg hover:bg-red-100 transition">
+            <Trash2 size={15} /> Delete
           </button>
         </div>
         <div className="grid grid-cols-3 gap-3 mt-5">
