@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { GraduationCap, LogIn, UserPlus, KeyRound } from "lucide-react";
-import { login as apiLogin, signup as apiSignup, forgotPassword as apiForgotPassword } from "./api";
+import { GraduationCap, LogIn, UserPlus } from "lucide-react";
+import { login as apiLogin, signup as apiSignup } from "./api";
 
 export default function Login({ onLogin }) {
-  const [mode, setMode] = useState("login"); // "login" | "signup" | "forgot"
+  const [mode, setMode] = useState("login"); // "login" ya "signup"
 
   return (
     <div className="min-h-screen bg-sky-50 flex items-center justify-center p-4">
@@ -16,27 +16,18 @@ export default function Login({ onLogin }) {
           <p className="text-sm text-slate-500">Fees portal</p>
         </div>
 
-        {mode === "login" && <LoginForm onLogin={onLogin} />}
-        {mode === "signup" && <SignupForm onLogin={onLogin} />}
-        {mode === "forgot" && <ForgotForm onDone={() => setMode("login")} />}
+        {mode === "login"
+          ? <LoginForm onLogin={onLogin} />
+          : <SignupForm onLogin={onLogin} />}
 
-        <div className="flex flex-col gap-2 mt-4">
-          {mode !== "signup" && (
-            <button onClick={() => setMode("signup")} className="text-sm text-sky-600 hover:text-sky-700">
-              Naya parent ho? Account banao
-            </button>
-          )}
-          {mode !== "login" && (
-            <button onClick={() => setMode("login")} className="text-sm text-sky-600 hover:text-sky-700">
-              Already account hai? Login karo
-            </button>
-          )}
-          {mode !== "forgot" && (
-            <button onClick={() => setMode("forgot")} className="text-sm text-slate-500 hover:text-slate-700">
-              Password bhool gaye?
-            </button>
-          )}
-        </div>
+        <button
+          onClick={() => setMode(mode === "login" ? "signup" : "login")}
+          className="w-full text-center text-sm text-sky-600 hover:text-sky-700 mt-4"
+        >
+          {mode === "login"
+            ? "Naya parent ho? Account banao"
+            : "Already account hai? Login karo"}
+        </button>
       </div>
     </div>
   );
@@ -93,15 +84,19 @@ function SignupForm({ onLogin }) {
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   function submit() {
+    // ✅ EMPTY FIELD CHECK
     if (!form.name || !form.phone || !form.email || !form.password || !form.admission_no) {
       setError("Naam, email, phone, password aur admission number zaroori hai");
       return;
     }
+
+    // ✅ EMAIL FORMAT CHECK - MOVED INSIDE submit()
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(form.email)) {
       setError("Sahi email address daalo (example: name@gmail.com)");
       return;
     }
+
     setBusy(true);
     setError("");
     apiSignup(form)
@@ -139,57 +134,6 @@ function SignupForm({ onLogin }) {
       <button onClick={submit} disabled={busy}
         className="w-full bg-sky-600 text-white font-medium py-2.5 rounded-lg hover:bg-sky-500 disabled:opacity-50 transition flex items-center justify-center gap-2">
         <UserPlus size={16} /> {busy ? "Account ban raha..." : "Account banao"}
-      </button>
-    </>
-  );
-}
-
-function ForgotForm({ onDone }) {
-  const [form, setForm] = useState({ phone: "", admission_no: "", new_password: "" });
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [busy, setBusy] = useState(false);
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
-
-  function submit() {
-    if (!form.phone || !form.admission_no || !form.new_password) {
-      setError("Sab fields zaroori hai");
-      return;
-    }
-    setBusy(true);
-    setError("");
-    setSuccess("");
-    apiForgotPassword(form)
-      .then((data) => {
-        setSuccess(data.message);
-        setTimeout(onDone, 1500);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setBusy(false));
-  }
-
-  return (
-    <>
-      <p className="text-xs text-slate-500 mb-3">Apna phone aur bachche ka admission number daalo, naya password set ho jayega.</p>
-
-      <label className="text-xs text-slate-500 mb-1 block">Aapka phone (jo signup me diya tha)</label>
-      <input value={form.phone} onChange={set("phone")} placeholder="9876543210"
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 mb-3 outline-none focus:border-sky-500 transition" />
-
-      <label className="text-xs text-slate-500 mb-1 block">Bachche ka Admission Number</label>
-      <input value={form.admission_no} onChange={set("admission_no")} placeholder="ADM004"
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 mb-3 outline-none focus:border-sky-500 transition" />
-
-      <label className="text-xs text-slate-500 mb-1 block">Naya password</label>
-      <input type="password" value={form.new_password} onChange={set("new_password")} placeholder="••••••"
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 mb-4 outline-none focus:border-sky-500 transition" />
-
-      {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
-      {success && <p className="text-sm text-green-600 mb-3">{success}</p>}
-
-      <button onClick={submit} disabled={busy}
-        className="w-full bg-sky-600 text-white font-medium py-2.5 rounded-lg hover:bg-sky-500 disabled:opacity-50 transition flex items-center justify-center gap-2">
-        <KeyRound size={16} /> {busy ? "Reset ho raha..." : "Password reset karo"}
       </button>
     </>
   );
