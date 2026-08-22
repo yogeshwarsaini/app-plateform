@@ -95,3 +95,16 @@ export async function deleteStudent(id) {
   }
   return res.json();
 }
+
+export async function forgotPassword(payload) {
+  const res = await fetch(`${API_URL}/api/v1/auth/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Reset fail");
+  }
+  return res.json();
+}
